@@ -1,8 +1,8 @@
                                             ; Kernel/CPU-Architektur: x86-64 Bit Linux (Little Endian)
                                             ; Der Standard-Linker ld erzeugt beim direkten Linken von
-                                            ; Assembler-Objektdateien eine klassische EXEC-Binärdatei,
-                                            ; bei der alle virtuellen Zieladressen festgeschrieben werden.
-section .rodata                             ; Read only: 0x00400000
+                                            ; Assembler-Objektdateien eine klassische 3 section EXEC-Binärdatei,
+; ----------------------------------------- ; bei der alle virtuellen Zieladressen festgeschrieben werden.
+section .rodata                             ; Read only Page: 0x00400000
 
 hexlut: db '0123456789ABCDEF'               ; Lookup-Table ASCII-Hex-Zeichen
 
@@ -39,20 +39,19 @@ arg_bin:     db  "--bin", 0
 arg_bin_len  equ 5
 
 
-
-section .bss                                ; 0x0000000000402000 RW
-align 16
+; ----------------------------------------- ; Read and Write Pages
+section .bss                                ; virtuall address: 0x00402000
+align 16                                    ; "readelf -a" shows all Segment mapping
 inbuf:   resb 0x4000                        ; 16 KiB Eingabepuffer
 outbuf:  resb 0x8000                        ; 32 KiB Ausgabepuffer Encode verdoppelt
 termios: resb 64                            ; Puffer TTY-Erkennung
                                             ; --------------------------
                                             ; Wenn das Programm startest über den Systemaufruf
                                             ; execve lädt der Kernel die ELF-Datei und prüft deren Header.
-section .text                               ; Da der Kernel im privilegierten Modus Ring 0 läuft,
-    global _start                           ; nutzt er spezielle CPU-Befehle: sysretq oder iretq,
-                                            ; Diese Befehle wechseln gleichzeitig das CPU-Privilegienlevel
-                                            ; von Ring 0 Kernel zu Ring 3 Userspace.
-_start:                                     ; Kernel setzt den Instruction Pointer hier auf 0x00401000 R E
+section .text
+    global _start
+                                            ; Einstiegspunkt, Wechsel vom Kernel in den User-Space
+_start:                                     ; Kernel setzt den Instruction Pointer hier auf 0x00401000
     mov     r13, [rsp]                      ; argc
     cmp     r13, 1                          ;
     je      .check_pipe                     ; keine Parameter -> Pipe/TTY pruefen
